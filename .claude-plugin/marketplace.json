@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "darkingtail-skills",
+  "description": "Personal productivity skills for Claude Code",
+  "owner": {
+    "name": "darkingtail"
+  },
+  "plugins": [
+    {
+      "name": "darkingtail",
+      "description": "Personal productivity skills: system cleanup, session cleaner, GitHub star organizer, daily TIL, interview notes, life reminders",
+      "author": {
+        "name": "darkingtail"
+      },
+      "source": "./plugins/darkingtail",
+      "category": "productivity"
+    }
+  ]
+}
