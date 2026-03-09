@@ -69,16 +69,18 @@ case "$CMD" in
       exit 1
     fi
 
-    # Build JSON array of list IDs and send as --input
-    JSON_IDS=$(printf '%s\n' "${LIST_IDS[@]}" | jq -R . | jq -s .)
+    # Build JSON array of list IDs without external jq
+    JSON_IDS="["
+    for i in "${!LIST_IDS[@]}"; do
+      [[ $i -gt 0 ]] && JSON_IDS+=","
+      JSON_IDS+="\"${LIST_IDS[$i]}\""
+    done
+    JSON_IDS+="]"
+
+    BODY="{\"query\":\"mutation(\$itemId: ID!, \$listIds: [ID!]!) { updateUserListsForItem(input: {itemId: \$itemId, listIds: \$listIds}) { user { login } } }\",\"variables\":{\"itemId\":\"${REPO_ID}\",\"listIds\":${JSON_IDS}}}"
 
     _do_add() {
-      jq -n \
-        --arg query 'mutation($itemId: ID!, $listIds: [ID!]!) { updateUserListsForItem(input: {itemId: $itemId, listIds: $listIds}) { user { login } } }' \
-        --arg itemId "$REPO_ID" \
-        --argjson listIds "$JSON_IDS" \
-        '{query: $query, variables: {itemId: $itemId, listIds: $listIds}}' \
-      | gh api graphql --input - --jq '.data.updateUserListsForItem.user.login'
+      echo "$BODY" | gh api graphql --input - --jq '.data.updateUserListsForItem.user.login'
     }
     retry _do_add
     ;;
