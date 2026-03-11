@@ -5,7 +5,11 @@ Personal Claude Code skills by darkingtail.
 ## Installation
 
 ```bash
+# 1. Add marketplace
 claude plugin marketplace add darkingtail/skills
+
+# 2. Install plugin
+claude plugin install darkingtail
 ```
 
 ## Skills
