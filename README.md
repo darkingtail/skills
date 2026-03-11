@@ -22,6 +22,7 @@ claude plugin install darkingtail
 | daily-til | TIL, 今天学到, 记录知识点 | Today I Learned knowledge base |
 | interview-notes | 面试笔记, 面试记录, 复习完了 | Frontend interview revision notes |
 | life-reminders | 提醒, 记住, 踩坑了, 以后注意 | Life lessons and reminders |
+| update-skills | 更新 skills, 更新插件, 一键更新 | One-click update all plugins and marketplaces |
 
 ## Setup
 
