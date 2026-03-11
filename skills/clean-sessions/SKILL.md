@@ -1,5 +1,5 @@
 ---
-name: clean-sessions
+name: darkingtail:clean-sessions
 description: 清理 Claude Code 中无意义的对话记录。当用户说"清理对话"、"删除无用会话"、"清理 session"等表达时使用此技能。
 ---
 

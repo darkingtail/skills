@@ -1,5 +1,5 @@
 ---
-name: system-cleanup
+name: darkingtail:system-cleanup
 description: Use when the user wants to clean up disk space, slim down their system, remove junk files, clear caches, or find large unused files. Triggers on keywords like "瘦身", "清理磁盘", "disk cleanup", "free space", "clean junk".
 ---
 

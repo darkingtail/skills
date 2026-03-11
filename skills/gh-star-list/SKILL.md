@@ -1,5 +1,5 @@
 ---
-name: gh-star-list
+name: darkingtail:gh-star-list
 description: "Categorize GitHub stars into Lists with AI, detect stale repos and recommend active alternatives. Supports batch/selective categorization and progressive freeze detection. Triggers: 'organize stars', '整理 stars', 'stars 分类', 'gh-star-list'."
 metadata:
   version: "2.0.0"

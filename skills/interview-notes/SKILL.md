@@ -1,5 +1,5 @@
 ---
-name: interview-notes
+name: darkingtail:interview-notes
 description: 记录前端面试复习笔记。当用户说"面试笔记"、"面试记录"、"复习完了"等明确与面试相关的表达时使用此技能。
 ---
 

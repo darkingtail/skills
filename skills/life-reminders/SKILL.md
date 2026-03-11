@@ -1,5 +1,5 @@
 ---
-name: life-reminders
+name: darkingtail:life-reminders
 description: Use when the user wants to record a life lesson, reminder, or something to remember for next time. Triggers on "提醒", "reminder", "记住", "下次别忘了", "别忘了", "以后不能再犯", "以后注意", "踩坑了", "吃亏了", "长个记性".
 ---
 

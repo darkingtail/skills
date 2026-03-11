@@ -1,5 +1,5 @@
 ---
-name: update-skills
+name: darkingtail:update-skills
 description: "One-click update all Claude Code plugins and marketplaces. Triggers: 'update skills', '更新 skills', '更新插件', '一键更新'."
 ---
 

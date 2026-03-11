@@ -1,5 +1,5 @@
 ---
-name: daily-til
+name: darkingtail:daily-til
 description: 记录 Today I Learned 个人知识库。当用户说"记录知识点"、"今天学到"、"TIL"时使用。注意：仅限通用跨项目知识点，项目特有信息应存入项目 memory 文件。"记一下"不一定是 daily-til，需结合上下文判断是否是通用知识。
 metadata:
   author: user
