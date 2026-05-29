@@ -1,8 +1,14 @@
 # Skills
 
-Personal Claude Code skills by darkingtail.
+Personal AI coding agent skills by darkingtail.
 
-## Installation
+## Supported Agents
+
+- Claude Code
+- Codex CLI / Codex Desktop
+- Compatible AI coding agents that support `SKILL.md`-based skills
+
+## Claude Code Installation
 
 ```bash
 # 1. Add marketplace
@@ -10,6 +16,22 @@ claude plugin marketplace add darkingtail/skills
 
 # 2. Install plugin
 claude plugin install darkingtail
+```
+
+## Codex Installation
+
+This repository includes a Codex plugin manifest at `.codex-plugin/plugin.json`.
+
+For local testing, copy a skill into the Codex global skills directory:
+
+```powershell
+Copy-Item -Recurse -Force .\skills\folder-git-identity $HOME\.codex\skills\folder-git-identity
+```
+
+Then restart Codex and invoke the skill explicitly:
+
+```text
+Use $darkingtail:folder-git-identity to explain what this skill is for. Do not edit files.
 ```
 
 ## Skills

@@ -1,0 +1,22 @@
+{
+  "name": "darkingtail",
+  "version": "0.1.0",
+  "description": "Personal AI coding agent skills by darkingtail.",
+  "author": {
+    "name": "darkingtail"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "darkingtail",
+    "shortDescription": "Personal AI coding agent skills.",
+    "longDescription": "Personal AI coding agent skills by darkingtail for Claude Code, Codex, and compatible coding agents.",
+    "developerName": "darkingtail",
+    "category": "Productivity",
+    "capabilities": [
+      "Personal productivity workflows",
+      "GitHub and Git repository helpers",
+      "Knowledge capture and cleanup utilities"
+    ],
+    "defaultPrompt": "Help me use darkingtail skills."
+  }
+}
