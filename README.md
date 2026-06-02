@@ -18,14 +18,22 @@ claude plugin marketplace add darkingtail/skills
 claude plugin install darkingtail
 ```
 
+Or inside Claude Code:
+
+```text
+/plugin marketplace add darkingtail/skills
+/plugin install darkingtail
+```
+
 ## Codex Installation
 
 This repository includes a Codex plugin manifest at `.codex-plugin/plugin.json`.
 
-For local testing, copy a skill into the Codex global skills directory:
+For local testing, copy the skills into the Codex global skills directory:
 
 ```powershell
-Copy-Item -Recurse -Force .\skills\folder-git-identity $HOME\.codex\skills\folder-git-identity
+New-Item -ItemType Directory -Force $HOME\.codex\skills | Out-Null
+Copy-Item -Recurse -Force .\skills\* $HOME\.codex\skills\
 ```
 
 Then restart Codex and invoke the skill explicitly:
@@ -40,12 +48,12 @@ Use $darkingtail:folder-git-identity to explain what this skill is for. Do not e
 |-------|---------|-------------|
 | system-cleanup | 瘦身, 清理磁盘, disk cleanup | Scan and clean junk files, caches, leftovers |
 | clean-sessions | 清理对话, 清理 session | Remove meaningless Claude Code session files |
-| gh-star-list | 整理 stars, stars 分类 | Categorize GitHub stars into Lists with AI |
+| gh-star-list | 整理 stars, stars 分类, star 复盘 | Review, triage, categorize, and prune GitHub stars |
 | daily-til | TIL, 今天学到, 记录知识点 | Today I Learned knowledge base |
-| interview-notes | 面试笔记, 面试记录, 复习完了 | Frontend interview revision notes |
-| life-reminders | 提醒, 记住, 踩坑了, 以后注意 | Life lessons and reminders |
-| update-skills | 更新 skills, 更新插件, 一键更新 | One-click update all plugins and marketplaces |
 | folder-git-identity | Git 身份, 目录级 Git 配置, includeIf | Manage directory-scoped Git user.name/user.email |
+| time-context | 明天再做, 下次继续, 提醒我 | Remember time-relative continuation context locally |
+| smart-debug-logger | 加日志, console.log, 清理日志 | Context-aware debug logging with cleanup |
+| update-skills | 更新 skills, 更新插件, 一键更新 | One-click update all plugins and skills |
 
 ## Setup
 

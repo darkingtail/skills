@@ -1,255 +1,190 @@
 ---
 name: darkingtail:gh-star-list
-description: "Categorize GitHub stars into Lists with AI, detect stale repos and recommend active alternatives. Supports batch/selective categorization and progressive freeze detection. Triggers: 'organize stars', '整理 stars', 'stars 分类', 'gh-star-list'."
+description: "Use when the user wants to review, triage, categorize, prune, or rediscover GitHub starred repositories. Triggers: '整理 stars', 'stars 分类', 'star 复盘', '看看我收藏的项目', 'gh-star-list'."
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
 ---
 
 # GitHub Star List
 
-Organize GitHub starred repos into GitHub Lists automatically.
+Turn a large GitHub star collection into an intentional review system. The goal is not just categorization: help the user find what is still useful, what deserves a deeper look, what can stay as reference, and what should be frozen or unstarred.
+
+## Operating Model
+
+Treat starred repos as a personal backlog with four states:
+
+| State | Meaning | GitHub List |
+| --- | --- | --- |
+| Inbox | Recently starred or never reviewed | `Inbox` or uncategorized |
+| Keep | Known useful repo worth keeping visible | Purpose-based lists |
+| Trial | Interesting repo to inspect, try, or compare later | `To Try` |
+| Freeze | Stale, replaced, irrelevant, or weak signal | `Cold Storage` |
+
+Do not bulk-move, freeze, or unstar without explicit confirmation.
 
 ## Prerequisites
 
-Verify environment before starting. Run these checks and guide user through any failures:
+Verify the environment before making GitHub changes:
 
 ```bash
-# 1. Check gh CLI installed
-gh --version || echo "MISSING"
-
-# 2. Check gh authenticated with 'user' scope
-gh auth status  # must show 'user' in scopes
-
-# 3. Check jq installed (only needed for bash scripts on macOS/Linux)
-jq --version || echo "MISSING"
+gh --version
+gh auth status
 ```
 
-**Troubleshooting:**
+The authenticated GitHub account needs the `user` scope for GitHub Lists API access:
 
-| Problem              | Solution                                                                 |
-| -------------------- | ------------------------------------------------------------------------ |
-| `gh` not installed   | macOS: `brew install gh`. Windows: `scoop install gh`. Others: <https://cli.github.com> |
-| `gh` not logged in   | `gh auth login -h github.com -p https -w` (opens browser)                |
-| `user` scope missing | `gh auth refresh -s user -h github.com`                                  |
-| `jq` not installed   | macOS: `brew install jq`. Not needed on Windows (PowerShell scripts handle JSON natively) |
+```bash
+gh auth refresh -s user -h github.com
+```
 
-All checks must pass before proceeding. The `user` scope is required for GitHub Lists API access.
+On macOS/Linux, the bundled bash scripts also need `jq`. On Windows, use the PowerShell scripts.
 
 ## Scripts
 
-All scripts are in `scripts/` relative to this skill's directory. **Choose the correct version based on platform:**
+Scripts are in `scripts/` relative to this skill directory.
 
-- **Windows**: use `.ps1` scripts with `powershell` (no `jq` dependency, compatible with PS 5.1+)
-- **macOS/Linux**: use `.sh` scripts with `bash` (requires `jq`)
+| Bash | PowerShell | Purpose |
+| --- | --- | --- |
+| `fetch_stars.sh` | `fetch_stars.ps1` | Fetch starred repos as JSONL |
+| `manage_lists.sh` | `manage_lists.ps1` | Get/create/delete/update GitHub Lists |
 
-| Bash (macOS/Linux)  | PowerShell (Windows) | Purpose                                                            |
-| ------------------- | -------------------- | ------------------------------------------------------------------ |
-| `fetch_stars.sh`    | `fetch_stars.ps1`    | Fetch starred repos (paginated). Outputs one JSON object per line. |
-| `manage_lists.sh`   | `manage_lists.ps1`   | CRUD for GitHub Lists: `get`, `create`, `delete`, `add`            |
+Use PowerShell on Windows:
+
+```powershell
+powershell -File scripts/fetch_stars.ps1 -Limit 50 | Out-File -Encoding utf8 $env:TEMP\stars.jsonl
+powershell -File scripts/manage_lists.ps1 get | Out-File -Encoding utf8 $env:TEMP\lists.json
+```
+
+Use bash on macOS/Linux:
+
+```bash
+bash scripts/fetch_stars.sh --limit 50 > /tmp/stars.jsonl
+bash scripts/manage_lists.sh get > /tmp/lists.json
+```
 
 ## Modes
 
-### Mode 1: Full Batch (default)
+Choose the smallest useful mode from the user's wording.
 
-Categorize all starred repos at once. Trigger: "整理所有 stars", "organize all my stars".
+| Mode | When to use | Default batch |
+| --- | --- | --- |
+| Inbox review | User says "整理一下", "看看最近 star", or has no clear scope | Latest 20 |
+| Full audit | User says "全部", "所有", or wants a one-time cleanup | All stars, processed in batches |
+| Focused review | User names a topic, language, repo, or use case | Matching repos only |
+| Stale review | User asks about outdated, abandoned, or replaceable repos | Stale candidates |
 
-### Mode 2: Selective
+If the user is vague, default to Inbox review. Avoid starting with a full audit unless the user explicitly asks.
 
-Categorize specific repos or the latest N stars. Trigger: "整理最近 10 个 star", "把 xxx/yyy 加到合适的 list".
+## Review Workflow
 
-When no specific repos are mentioned and user says "整理一下" without "所有/全部/all", default to **latest 10 stars**.
+### Step 1: Fetch Working Set
 
-## Workflow
+Fetch stars and existing lists. Tell the user the exact scope before analysis: for example, "I found 20 latest stars and 7 existing lists."
 
-### Step 1: Fetch Data
-
-**Full batch mode:**
-
-```bash
-# macOS/Linux
-bash scripts/fetch_stars.sh > /tmp/stars.jsonl
-bash scripts/manage_lists.sh get > /tmp/lists.json
-
-# Windows
-powershell -File scripts/fetch_stars.ps1 | Out-File -Encoding utf8 $env:TEMP/stars.jsonl
-powershell -File scripts/manage_lists.ps1 get | Out-File -Encoding utf8 $env:TEMP/lists.json
-```
-
-**Selective mode (latest N):**
+For specific repos, fetch details directly:
 
 ```bash
-# macOS/Linux
-bash scripts/fetch_stars.sh --limit N > /tmp/stars.jsonl
-bash scripts/manage_lists.sh get > /tmp/lists.json
-
-# Windows
-powershell -File scripts/fetch_stars.ps1 -Limit N | Out-File -Encoding utf8 $env:TEMP/stars.jsonl
-powershell -File scripts/manage_lists.ps1 get | Out-File -Encoding utf8 $env:TEMP/lists.json
+gh api repos/{owner}/{repo} --jq '{id: .node_id, full_name: .full_name, description: (.description // ""), topics: (.topics // []), language: (.language // ""), url: .html_url, pushed_at: .pushed_at, archived: .archived, open_issues_count: .open_issues_count, stargazers_count: .stargazers_count}'
 ```
 
-For specific repos, use `gh api` to fetch individual repo info:
+### Step 2: Score Each Repo
+
+Classify each repo with a short, practical judgment. The key question is: "Why should this stay in the user's attention?"
+
+Use these signals:
+
+| Signal | What to inspect |
+| --- | --- |
+| Purpose | Description, README summary, topics, name |
+| Personal relevance | Does it match the user's current work, learning, tools, or recurring interests? |
+| Actionability | Can the user install, read, try, compare, or reuse it soon? |
+| Quality | Stars, recent activity, docs, issue health, ecosystem reputation |
+| Freshness | `pushed_at`, archived state, open issues |
+| Redundancy | Is it superseded by another starred repo or mainstream tool? |
+
+Never classify primarily by programming language unless the user asks for language-based lists. Language is metadata, not purpose.
+
+### Step 3: Present Triage Table
+
+Present a compact table with an explicit recommendation:
+
+| Repo | What it is | Recommendation | Reason |
+| --- | --- | --- | --- |
+| owner/name | Short purpose | Keep / Trial / Freeze / Unstar candidate | One sentence |
+
+Default recommendations:
+
+- **Keep**: known useful, active, strong reference, or core ecosystem project.
+- **Trial**: impressive but not yet understood; worth reading or trying once.
+- **Freeze**: stale, niche, replaced, or low current relevance, but not safe to unstar yet.
+- **Unstar candidate**: clearly irrelevant, duplicate, archived with better alternatives, or low-signal collection noise.
+
+Ask for confirmation only after showing a complete batch proposal. Do not ask repo-by-repo unless the user requests it.
+
+### Step 4: Map To Lists
+
+Prefer stable, purpose-based lists:
+
+| List | Use for |
+| --- | --- |
+| AI | LLMs, ML, agents, AI apps |
+| Frontend | React, Vue, UI, CSS, design systems |
+| Backend | APIs, servers, databases, auth, queues |
+| Build & DX | Bundlers, linters, monorepos, dev workflows |
+| CLI & Desktop | Terminal tools, desktop apps, productivity |
+| Mobile | React Native, Flutter, iOS, Android |
+| DevOps | Docker, Kubernetes, CI/CD, infra, observability |
+| Learning | books, tutorials, awesome lists, examples |
+| To Try | repos worth a future hands-on test |
+| Cold Storage | stale, replaced, or low-priority repos kept for memory |
+
+Respect existing lists when they are close enough. Keep the total under GitHub's 32-list limit.
+
+### Step 5: Execute Approved Changes
+
+Create missing lists only after approval:
+
+```powershell
+powershell -File scripts/manage_lists.ps1 create "To Try" "Interesting starred repos to inspect or test later"
+powershell -File scripts/manage_lists.ps1 create "Cold Storage" "Stale, replaced, or low-priority starred repos kept for memory"
+```
+
+Add a repo to lists:
+
+```powershell
+powershell -File scripts/manage_lists.ps1 add <repo_node_id> <list_id> [<list_id>...]
+```
+
+Important: `updateUserListsForItem` replaces all list memberships for a repo. When preserving existing memberships, pass the full final list ID set in one call.
+
+### Step 6: Optional Alternatives
+
+For Freeze or Unstar candidates, look for better maintained alternatives:
 
 ```bash
-gh api repos/{owner}/{repo} --jq '{id: .node_id, full_name: .full_name, description: (.description // ""), topics: (.topics // []), language: (.language // ""), url: .html_url, pushed_at: .pushed_at, archived: .archived, open_issues_count: .open_issues_count}'
+gh search repos "<keywords from purpose/topics>" --sort stars --limit 5 --json fullName,description,pushedAt,stargazersCount,url
 ```
 
-Tell user how many stars to process and how many existing lists found.
+Recommend alternatives only when they serve the same purpose and have recent activity. Do not auto-star alternatives.
 
-### Step 2: Analyze and Propose Categories
+## Stale Detection
 
-Read `/tmp/stars.jsonl` and `/tmp/lists.json`.
+Do not judge only by age.
 
-Analyze all repos and existing lists. Propose a categorization plan.
+| Condition | Default verdict |
+| --- | --- |
+| Archived | Freeze or Unstar candidate |
+| No push for 1+ year and many open issues | Freeze |
+| No push for 1+ year but few issues | Inspect purpose before judging |
+| Font, spec, book, tutorial, or awesome list | Can be mature rather than stale |
+| Active but redundant | Freeze or Unstar candidate depending on relevance |
 
-#### Classification Principles (IMPORTANT)
+## Final Report
 
-1. **Classify by PURPOSE, not language** (unless the user explicitly requests language-based grouping): A Rust-written JS bundler belongs in "Build & DX", not "Rust". A Swift-written clipboard tool belongs in "CLI & Tools", not "iOS". Language is metadata, not category.
-2. **Description > Topics > Name > Language**: Prioritize description to understand what the repo DOES. Language is the weakest signal and should only be used as a tiebreaker.
-3. **Ask "what does this repo help the user DO?"**: A framework for building mobile apps → Mobile. A linter for Python → Build & DX. A deepfake tool → AI or Misc.
-4. **Avoid over-broad categories**: If a list exceeds 40 items, consider splitting by sub-purpose.
-5. **Framework vs Library vs Tool**: Web frameworks (Express, Hono, Koa) → Backend. UI component libraries (Ant Design, shadcn) → UI & Design. Build tools (Vite, Rspack) → Build & DX.
+End with:
 
-#### Recommended Categories
-
-Use these as a starting template for full batch mode. Adjust based on user's actual star composition — skip empty categories, merge small ones, split large ones (>40 repos).
-
-| Category           | Description                                          | Typical repos                       |
-| ------------------ | ---------------------------------------------------- | ----------------------------------- |
-| AI                 | LLMs, ML frameworks, AI apps, agents                 | langchain, ollama, stable-diffusion |
-| React              | React ecosystem: frameworks, hooks, state management | next.js, react, zustand             |
-| React Native       | React Native core, navigation, UI libs               | react-navigation, expo              |
-| Vue                | Vue ecosystem: frameworks, plugins, tools            | nuxt, vueuse, element-plus          |
-| Flutter            | Flutter/Dart packages and apps                       | flutter, riverpod                   |
-| Mobile Native      | iOS/Android native development                       | Kotlin/Swift libs, Jetpack          |
-| WeChat             | Mini programs, WeChat SDK, WePY                      | wepy, vant-weapp                    |
-| Backend            | Server frameworks, databases, APIs                   | express, fastapi, prisma            |
-| Build & DX         | Bundlers, linters, dev tools, monorepo               | vite, eslint, turborepo             |
-| CLI & Tools        | Desktop apps, CLI utilities, productivity            | homebrew, raycast, warp             |
-| UI & Design        | Component libraries, CSS, animation                  | tailwindcss, shadcn, framer-motion  |
-| Network & Proxy    | HTTP clients, proxies, VPN, network tools            | clash, axios, nginx                 |
-| DevOps & Docker    | CI/CD, containers, infra, monitoring                 | docker, k8s, terraform              |
-| Low-Code & Admin   | Admin panels, low-code platforms, CMS                | strapi, appsmith, refine            |
-| Awesome & Learning | Curated lists, tutorials, books, courses             | awesome-xxx, free-programming-books |
-| Misc               | Repos that don't fit elsewhere                       |                                     |
-
-#### Category Guidelines
-
-- **Respect existing lists**: Keep lists that already have items. Prefer assigning to existing lists when they match.
-- **Generate new categories**: Only for repos that don't fit any existing list.
-- **Total lists cap**: Stay within GitHub's 32-list limit.
-- **Full batch**: Target 15-25 total lists.
-- **Selective**: Prefer assigning to existing lists; only propose new lists if truly needed.
-
-Present the plan as a table. Wait for user confirmation or adjustments.
-
-### Step 3: Execute
-
-After user confirms:
-
-1. Create new lists:
-   - bash: `bash scripts/manage_lists.sh create "<name>" "<description>"`
-   - pwsh: `powershell -File scripts/manage_lists.ps1 create "<name>" "<description>"`
-2. Collect all list IDs (existing + new)
-3. Add repos to lists:
-   - bash: `bash scripts/manage_lists.sh add <repo_node_id> <list_id>`
-   - pwsh: `powershell -File scripts/manage_lists.ps1 add <repo_node_id> <list_id>`
-
-**Critical**: The `add` command calls `updateUserListsForItem` which **replaces** all list memberships for a repo. The `listIds` param is the **complete** set of lists the repo should belong to. To preserve existing membership, include ALL list IDs (old + new) in a single call.
-
-Full batch: process in batches, report progress every 50 repos.
-Selective: process all at once.
-
-### Step 4: Summary
-
-Run `bash scripts/manage_lists.sh get` and present a summary table showing list name, repo count, and whether each list is new or existing.
-
-### Step 5: Freeze Detection (Progressive)
-
-**This step is optional.** After Step 4, scan the `pushed_at`, `archived`, and `open_issues_count` fields from `/tmp/stars.jsonl` to detect potentially stale repos.
-
-If stale candidates are found, prompt the user:
-
-> "检测到 N 个疑似休眠项目，要进入冷冻检测吗？"
-
-If the user declines, stop here. If the user agrees, proceed with analysis.
-
-#### Multi-Signal Stale Detection
-
-Do NOT judge solely by time. Use a layered approach:
-
-| Layer                | Condition                                            | Verdict                                |
-| -------------------- | ---------------------------------------------------- | -------------------------------------- |
-| **Confirmed stale**  | `archived = true`                                    | Mark directly                          |
-| **Likely abandoned** | No push for 1+ year **AND** `open_issues_count > 20` | Mark — bugs filed, nobody fixing       |
-| **AI judgment**      | No push for 1+ year **BUT** few or zero open issues  | AI decides based on description/topics |
-
-##### AI Judgment Rules for Layer 3
-
-Repos with low issue counts and no recent pushes may be **mature/complete**, not abandoned. Exempt these types:
-
-- **Fonts**: e.g., FiraCode, Inter — fonts don't need updates once complete
-- **Books/Tutorials**: e.g., CS-Notes, free-programming-books — content is reference material
-- **Specifications/Standards**: e.g., JSON Schema, OpenAPI specs
-- **Curated lists**: e.g., awesome-xxx — may have slow but steady community PRs
-- **Finished tools**: e.g., a CLI utility that does one thing well with no open bugs
-
-For all others in Layer 3, mark as stale.
-
-Present results as a table with columns: repo name, last push date, open issues, verdict (confirmed/abandoned/AI-judged), reason. Let the user select which repos to freeze. **Never auto-freeze — user must confirm.**
-
-### Step 6: Freeze and Recommend Alternatives
-
-For each repo the user confirms to freeze:
-
-#### 6a: Move to 🧊 冷冻库
-
-1. Check if `🧊 冷冻库` list exists; if not, create it:
-
-   ```bash
-   # bash
-   bash scripts/manage_lists.sh create "🧊 冷冻库" "休眠或疑似弃坑的项目，暂不取消 star"
-   # pwsh
-   powershell -File scripts/manage_lists.ps1 create "🧊 冷冻库" "休眠或疑似弃坑的项目，暂不取消 star"
-   ```
-
-2. Move the repo to the freeze list:
-
-   ```bash
-   # bash
-   bash scripts/manage_lists.sh add <repo_node_id> <freeze_list_id>
-   # pwsh
-   powershell -File scripts/manage_lists.ps1 add <repo_node_id> <freeze_list_id>
-   ```
-
-   This replaces the repo's previous list memberships. The repo is now only in 🧊 冷冻库.
-
-#### 6b: Recommend Active Alternatives
-
-For each frozen repo, search for active alternatives:
-
-```bash
-gh search repos "<keywords from repo description/topics>" --sort stars --limit 5 \
-  --json fullName,description,pushedAt,stargazersCount
-```
-
-Filter candidates by:
-
-- Pushed within the last 6 months
-- More stars than the frozen repo (or comparable star count with active maintenance)
-- Similar purpose (not just similar keywords)
-
-Present recommendations as a table per frozen repo:
-
-| Alternative | Stars | Last Push | Description |
-| ----------- | ----- | --------- | ----------- |
-
-If no good alternative exists, say so explicitly. The user decides whether to star any alternatives. **Do not auto-star.**
-
-### Step 7: Final Report
-
-Present a combined summary:
-
-- **Categorization stats**: N repos categorized into M lists
-- **Freeze stats**: N repos moved to 🧊 冷冻库 (if any)
-- **New alternatives starred**: N repos (if any)
-- **Total stars**: current count
+- Repos reviewed
+- Lists created or changed
+- Keep / Trial / Freeze / Unstar candidate counts
+- Any alternatives worth inspecting
+- Suggested next batch, usually latest 20 or one focused topic
