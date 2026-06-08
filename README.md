@@ -55,6 +55,10 @@ Use $darkingtail:folder-git-identity to explain what this skill is for. Do not e
 | smart-debug-logger | 加日志, console.log, 清理日志 | Context-aware debug logging with cleanup |
 | update-skills | 更新 skills, 更新插件, 一键更新 | One-click update all plugins and skills |
 
+## Design Docs
+
+Design notes for skill and plugin changes live in [docs/design](docs/design/README.md).
+
 ## Setup
 
 Some skills reference paths from `~/.claude/CLAUDE.md`. Add a `# Paths` section:
