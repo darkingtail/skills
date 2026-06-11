@@ -2,7 +2,7 @@
 name: darkingtail:time-context
 description: "Use when the user mentions relative time, deferred work, next-time continuation, reminders, or temporal context. Triggers: '明天再做', '下次继续', '过几天', '提醒我', '到时候', '继续上次', 'time context'."
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Time Context
@@ -11,13 +11,19 @@ Keep lightweight time awareness across conversations. Use this when the user def
 
 ## Storage
 
-Use a local Markdown ledger:
+Use the darkingtail global data directory:
 
 ```text
-~/.codex/time-context.md
+~/.darkingtail/time-context/ledger.md
 ```
 
-Create it if missing. Keep entries short and append-only unless the user explicitly asks to clean them up.
+Initialize on first use:
+
+1. If `~/.darkingtail/` does not exist, create it with a `README.md` explaining its purpose.
+2. If `~/.darkingtail/time-context/` does not exist, create it.
+3. Create `ledger.md` if missing.
+
+Keep entries short and append-only unless the user explicitly asks to clean them up.
 
 Entry format:
 
@@ -51,7 +57,7 @@ If the date is ambiguous, make a conservative interpretation and state it. Ask o
 
 If the user says "继续", "继续上次", "上次那个", "明天那个", or similar:
 
-1. Read `~/.codex/time-context.md` if it exists.
+1. Read `~/.darkingtail/time-context/ledger.md` if it exists.
 2. Find open entries whose due date is today or earlier first.
 3. If none are due, use the most recent open entry.
 4. Briefly mention the date and context before continuing.
@@ -73,3 +79,12 @@ When the deferred task is finished, mark the matching entry as `done` by editing
 - This is not a calendar. Do not create external calendar events unless the user explicitly asks.
 - This is not a full todo system. Store only time-sensitive continuation context.
 - Do not promise automatic notifications. The skill helps future agents remember when the user asks again.
+
+## Migration
+
+If the old ledger exists at `~/.codex/time-context.md`:
+
+1. Read its contents.
+2. Write to `~/.darkingtail/time-context/ledger.md`.
+3. Tell the user the migration happened.
+4. Optionally delete the old file after user confirmation.
